@@ -39,7 +39,7 @@ async def send_image(message, photo):
 
 class YLBotClient(discord.Client):
     async def on_message(self, message):
-        global moment
+        global moment, guesscadr
         msg = message.content.lower()
         nlmsg = message.content
         if msg in bot_messages:
@@ -75,6 +75,7 @@ class YLBotClient(discord.Client):
             while guesscadr == 40 or guesscadr == 44 or guesscadr == 48:
                 guesscadr = guess[random.randrange(len(guess))]
             await send_image(message, file[guesscadr - 1])
+            print(names[guesscadr - 1])
             moment = 4
         if moment == 4 and names[guesscadr - 1] in nlmsg:
             await send_msg(message, 'Верно')

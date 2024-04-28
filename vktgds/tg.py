@@ -1,9 +1,11 @@
 import logging
-import discord
+import requests
 import telebot
 from telegram.ext import Application, MessageHandler, filters
 from config import BOT_TOKEN
 import random
+from vktgds import db_sess
+from vktgds.user import User
 
 
 logging.basicConfig(
@@ -22,7 +24,7 @@ for name in flinks:
     names.append(name[0])
 guess = [i for i in range(1, 51)]
 guesscadr = 0
-emb = discord.Embed(title = "Pepe", colour=discord.Colour.dark_green())
+db_sess.global_init("usertgid.db")
 
 
 async def new_id(id):
@@ -37,51 +39,81 @@ def send_photo(id, photo):
     bot.send_photo(id, photo)
 
 
+async def new_id(id):
+    global users
+    users[id] = [False, False, False, False, False]
+
+
+def get_map():
+    coord = '50.606802,55.364908'
+    url = 'https://static-maps.yandex.ru/1.x/'
+    params = {'l': 'map', 'll': coord, 'size': '650,450', 'pt': coord + ',pm2rdm', 'z': 17}
+    response = requests.request('get', url, params=params)
+    if response.status_code == 200:
+        with open('res.png', 'wb') as file:
+            file.write(response.content)
+            return True
+    else:
+        return False
+
+
 async def echo(update, context):
     global users, guesscadr
     message = update.message.text
-    id = update.message.from_user.id
-    if id not in users:
-        await new_id(id)
-    if users[id][0] and users[id][1] and users[id][2] and users[id][3] and users[id][4]:
+    tgid = update.message.from_user.id
+    if tgid not in users:
+        db_ses = db_sess.create_session()
+        user = User()
+        db_ses.add(user)
+        db_ses.commit()
+        await new_id(tgid)
+    if users[tgid][0] and users[tgid][1] and users[tgid][2] and users[tgid][3] and users[tgid][4]:
         if 'да' in message:
-            users[id][3], users[id][4] = False, False
+            users[tgid][3], users[tgid][4] = False, False
         else:
-            users[id][1], users[id][2], users[id][3], users[id][4] = False, False, False, False
-    if ('привет' in message.lower() or 'здравствуйте' in message.lower()) and not users[id][0]:
-        send_msg(id, 'Здравствуйте, я - чат-бот, который может искать и загадывать фильмы!')
-        send_msg(id, 'Если хотите поугадывать фильмы, то напишите "Загадывать"')
-        send_msg(id, 'Если хотите посмотреть фильмы, то напишите "Смотреть"')
-        users[id][0] = True
-    elif users[id][0] and not users[id][1] and ('загадывать' in message.lower() or 'смотреть' in message.lower()):
+            users[tgid][1], users[tgid][2], users[tgid][3], users[tgid][4] = False, False, False, False
+    if ('привет' in message.lower() or 'здравствуйте' in message.lower()) and not users[tgid][0]:
+        send_msg(tgid, 'Здравствуйте, я - чат-бот, который может искать и загадывать фильмы!')
+        send_msg(tgid, 'Если хотите поугадывать фильмы, то напишите "Загадывать"')
+        send_msg(tgid, 'Если хотите посмотреть фильмы, то напишите "Смотреть"')
+        send_msg(tgid, 'А также если вы введете секретное слово, то я отправлю вам карту, на которой будет '
+                       'отмечено место, куда вы сможете отправить жалобу на меня, также эта функция есть только '
+                       'у меня')
+        users[tgid][0] = True
+    if users[tgid][0] and 'синхрофазотрон' in message.lower():
+        get_map()
+        photo = open('res.png', 'rb')
+        send_photo(tgid, photo)
+    elif users[tgid][0] and not users[tgid][1] and ('загадывать' in message.lower() or 'смотреть' in message.lower()):
         if 'загадывать' in message.lower():
-            send_msg(id, 'Запускаю функцию "Отгадай фильм по кадру"')
-            users[id][1] = True
-            users[id][2] = True
+            send_msg(tgid, 'Запускаю функцию "Отгадай фильм по кадру"')
+            users[tgid][1] = True
+            users[tgid][2] = True
         if 'смотреть' in message.lower():
-            send_msg(id, 'Запускаю функцию "Просмотр фильмов"')
-            send_msg(id, 'Вот список:')
-            send_msg(id, '\n'.join(names))
-            users[id][1] = False
-            users[id][2] = True
-    if users[id][0] and not users[id][1] and users[id][2] and 'смотреть' not in message.lower():
+            send_msg(tgid, 'Запускаю функцию "Просмотр фильмов"')
+            send_msg(tgid, 'Вот список:')
+            send_msg(tgid, '\n'.join(names))
+            users[tgid][1] = False
+            users[tgid][2] = True
+    if users[tgid][0] and not users[tgid][1] and users[tgid][2] and 'смотреть' not in message.lower():
         if message not in names:
-            send_msg(id, 'Простите, я не знаю этот фильм')
+            send_msg(tgid, 'Простите, я не знаю этот фильм')
         else:
-            send_msg(id, flinks[names.index(message)][1])
-    if users[id][0] and users[id][1] and users[id][2] and not users[id][3]:
+            send_msg(tgid, flinks[names.index(message)][1])
+    if users[tgid][0] and users[tgid][1] and users[tgid][2] and not users[tgid][3]:
         guesscadr = guess[random.randrange(len(guess))]
         photo = open('photos/' + str(guesscadr + 1) + '.webp', 'rb')
-        send_photo(id, photo)
-        users[id][3] = True
-    if (users[id][0] and users[id][1] and users[id][2] and users[id][3] and names[guesscadr] in message
-            and not 'загадывать' in message.lower()):
-        send_msg(id, 'Верно')
-        send_msg(id, 'Хотите продолжить?')
-        users[id][4] = True
-    if (users[id][0] and users[id][1] and users[id][2] and users[id][3] and not names[guesscadr] in message
-            and not 'загадывать' in message.lower() and not 'да' in message.lower()):
-        send_msg(id, 'Неверно')
+        send_photo(tgid, photo)
+        users[tgid][3] = True
+        print(names[guesscadr])
+    if (users[tgid][0] and users[tgid][1] and users[tgid][2] and users[tgid][3] and names[guesscadr].lower() in
+            message.lower() and 'загадывать' not in message.lower()):
+        send_msg(tgid, 'Верно')
+        send_msg(tgid, 'Хотите продолжить?')
+        users[tgid][4] = True
+    elif (users[tgid][0] and users[tgid][1] and users[tgid][2] and users[tgid][3] and not names[guesscadr] in message
+          and 'загадывать' not in message.lower() and 'да' not in message.lower()):
+        send_msg(tgid, 'Неверно')
 
 
 def main():

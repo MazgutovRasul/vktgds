@@ -18,7 +18,7 @@ longpoll = VkLongPoll(bh)
 links = open('films.txt', 'r', encoding='Utf-8')
 links = ''.join(links.readlines()).split(',\n')
 flinks = []
-db_session.global_init("userids.db")
+db_session.global_init("userid.db")
 # Разделяем ссылки и названия фильмов
 for link in links:
     flinks.append(link.split(': '))
@@ -50,15 +50,8 @@ def send_photo(id, url):
                "random_id": 0})
 
 
-def getWeather():
+def getlocation():
     pass
-    # dict_sample = {"clear": "ясно",
-    #                "partly-cloudy": "малооблачно"}
-    # y = YaWeather(api_key='9ba2da0e-4b76-4bb5-8ac6-f01b47c6a822')
-    # res = y.forecast(Russia.Kazan)
-    # print(res)
-    # return f'температура: {res.fact.temp} °C, ощущается {res.fact.feels_like} °C ' + '\n'\
-    #        f'на улице: {dict_sample[res.fact.condition]}'
 
 
 # Эта функция отвечает за создание нового пользователя
@@ -73,16 +66,10 @@ for event in longpoll.listen():
         nlmsg = event.text
         vkid = event.user_id
         if vkid not in flags:
-            db = 'vkids.sqlite'
-            con = sqlite3.connect(db)
-            cur = con.cursor()
-            length = len(dict(cur.execute(f"""SELECT * FROM vkids""").fetchall()))
-            cur.execute(f"""INSERT INTO vkids Values('{str(length + 1)}', '{vkid}')""").fetchall()
             db_sess = db_session.create_session()
             user = User()
             db_sess.add(user)
             db_sess.commit()
-            print('asdf')
             new_id(vkid)
         if flags[vkid] == 5:
             if 'да' in message:
@@ -93,6 +80,9 @@ for event in longpoll.listen():
             blasthack(vkid, 'Здравствуйте, я - чат-бот, который может искать и загадывать фильмы!')
             blasthack(vkid, 'Если хотите поугадывать фильмы, то напишите "Загадывать"')
             blasthack(vkid, 'Если хотите посмотреть фильмы, то напишите "Смотреть"')
+            blasthack(vkid, 'А также если вы введете секретное слово, то я отправлю вам карту, на которой будет '
+                            'отмечено место, куда вы сможете отправить жалобу на меня, также эта функция есть только '
+                            'у меня')
             flags[vkid] = 1
         elif flags[vkid] == 1 and ('загадывать' in message or 'смотреть' in message):
             if 'загадывать' in message:
@@ -111,6 +101,7 @@ for event in longpoll.listen():
         if flags[vkid] == 2:
             guesscadr = guess[random.randrange(len(guess))]
             send_photo(vkid, photosid[guesscadr])
+            print(names[guesscadr - 1])
             flags[vkid] = 4
         if flags[vkid] == 4 and names[guesscadr - 1] in nlmsg:
             blasthack(vkid, 'Верно')
