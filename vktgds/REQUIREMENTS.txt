@@ -1,0 +1,10 @@
+sqlalchemy
+discord
+logging
+telebot
+telegram
+flask_login
+sqlalchemy_serializer
+vk_api
+subprocess
+PyQT5

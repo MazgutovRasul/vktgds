@@ -1,3 +1,4 @@
+# Импортируем библиотеки
 import logging
 import requests
 import telebot
@@ -8,29 +9,38 @@ from vktgds import db_sess
 from vktgds.user import User
 
 
+# Подключаемся к боту
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
 )
 bot = telebot.TeleBot(BOT_TOKEN)
 logger = logging.getLogger(__name__)
+# Считываем фильмы
 links = open('films.txt', 'r', encoding='Utf-8')
 links = ''.join(links.readlines()).split(',\n')
+# Тут мы разделяем фильмы и ссылки на них
 flinks = []
 for link in links:
     flinks.append(link.split(': '))
 names = []
+# Создаем словарь пользователей
 users = {}
+# Отбираем названия фильмов
 for name in flinks:
     names.append(name[0])
+# Создаем список чисел от 1 до 50
 guess = [i for i in range(1, 51)]
 guesscadr = 0
+# Подключаемся к бд
 db_sess.global_init("usertgid.db")
 
 
+# Эта функция отвечает за создание нового пользователя
 async def new_id(id):
     users[id] = [False, False, False, False, False]
 
 
+# Эта функция отвечает за отправку сообщений
 def send_msg(id, text):
     bot.send_message(id, text)
 
@@ -126,3 +136,4 @@ def main():
 # Запускаем функцию main() в случае запуска скрипта.
 if __name__ == '__main__':
     main()
+# 128

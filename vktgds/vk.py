@@ -5,7 +5,6 @@ import vk_api
 from vk_api.longpoll import VkLongPoll, VkEventType
 from config import token
 from users import User
-from datetime import datetime
 import db_session
 # from yaweather import Russia, YaWeather
 
@@ -50,10 +49,6 @@ def send_photo(id, url):
                "random_id": 0})
 
 
-def getlocation():
-    pass
-
-
 # Эта функция отвечает за создание нового пользователя
 def new_id(vkid):
     global flags
@@ -62,20 +57,26 @@ def new_id(vkid):
 
 for event in longpoll.listen():
     if event.type == VkEventType.MESSAGE_NEW and event.to_me:
+        # Тут считываются сообщение и id пользователя
         message = event.text.lower()
         nlmsg = event.text
         vkid = event.user_id
+        # Тут если id нет в словаре, то оно туда заносится
         if vkid not in flags:
             db_sess = db_session.create_session()
             user = User()
             db_sess.add(user)
             db_sess.commit()
             new_id(vkid)
+        # Тут пользователь может решить продолжить играть или нет, если пользователь решит продолжить, то ему отправится
+        # следующий кадр, если нет, то общение начнется почти с нуля
         if flags[vkid] == 5:
             if 'да' in message:
                 flags[vkid] = 2
-            else:
-                flags[vkid] = 0
+            if 'нет' in message:
+                flags[vkid] = 1
+        # Тут бот только начинает общение, но только если пользователь напишет слово 'привет' или слово 'здравствуйте'
+        # (Он просто очень обидчивый)
         if ('привет' in message or 'здравствуйте' in message) and flags[vkid] == 0:
             blasthack(vkid, 'Здравствуйте, я - чат-бот, который может искать и загадывать фильмы!')
             blasthack(vkid, 'Если хотите поугадывать фильмы, то напишите "Загадывать"')
@@ -84,7 +85,8 @@ for event in longpoll.listen():
                             'отмечено место, куда вы сможете отправить жалобу на меня, также эта функция есть только '
                             'у меня')
             flags[vkid] = 1
-        elif flags[vkid] == 1 and ('загадывать' in message or 'смотреть' in message):
+        # Тут пользователь выбирает, какой из функций бота воспользоваться
+        elif (flags[vkid] == 1 or flags[vkid] == 3) and ('загадывать' in message or 'смотреть' in message):
             if 'загадывать' in message:
                 blasthack(vkid, 'Запускаю функцию "Отгадай фильм по кадру"')
                 flags[vkid] = 2
@@ -93,20 +95,27 @@ for event in longpoll.listen():
                 blasthack(vkid, 'Вот список:')
                 blasthack(vkid, '\n'.join(names))
                 flags[vkid] = 3
+        # Тут реализована функция скидывания ссылок на фильмы
         if flags[vkid] == 3 and 'смотреть' not in message:
             if nlmsg not in names:
                 blasthack(vkid, 'Простите, я не знаю этот фильм')
             else:
                 blasthack(vkid, flinks[names.index(nlmsg)])
+        # Тут бот случайным образом выбирает кадр и отправляет его
         if flags[vkid] == 2:
             guesscadr = guess[random.randrange(len(guess))]
             send_photo(vkid, photosid[guesscadr])
+            # Тут я добавил эту строку, чтобы знать, как называется фильм, а то некоторые тестировщики не могли
+            # отгадать, а я не придумал ничего легче
             print(names[guesscadr - 1])
             flags[vkid] = 4
+        # Тут бот отправляет сообщение о том, что пользователь отгадал фильм, а также предлагает продолжить или
+        # закончить
         if flags[vkid] == 4 and names[guesscadr - 1] in nlmsg:
             blasthack(vkid, 'Верно')
             blasthack(vkid, 'Хотите продолжить?')
             flags[vkid] = 5
+        # ут бот отправляет сообщение о том, что пользователь не отгадал фильм
         if (flags[vkid] == 4 and names[guesscadr - 1] not in nlmsg and 'загадывать' not in message
                 and 'да' not in message):
             blasthack(vkid, 'Неверно')
